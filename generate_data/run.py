@@ -3,7 +3,9 @@ import os, errno
 import random as rnd
 import re
 import sys
+import pickle
 
+from pathlib import Path
 from tqdm import tqdm
 from string_generator import (
     create_strings_from_dict,
@@ -296,7 +298,7 @@ def make_dict(lang, inp):
             for token in re.sub(r, ' ', line.strip()).split(' '):
                 d.add(token)
     
-    with open(os.path.join('dicts', lang + '.txt'), 'w', encoding="utf8", errors='ignore') as f:
+    with (Path('dicts') / (lang + '.txt')).open('w', encoding="utf8", errors='ignore') as f:
         for token in d:
             f.write(token+'\n')
 
@@ -306,7 +308,7 @@ def load_dict(lang):
     """
 
     lang_dict = []
-    with open(os.path.join('dicts', lang + '.txt'), 'r', encoding="utf8", errors='ignore') as d:
+    with (Path('dicts') / (lang + '.txt')).open('r', encoding="utf8", errors='ignore') as d:
         lang_dict = [l for l in d.read().splitlines() if len(l) > 0]
     return lang_dict
 
@@ -315,12 +317,7 @@ def load_fonts(lang):
         Load all fonts in the fonts directories
     """
 
-    if lang == 'cn':
-        return [os.path.join('fonts/cn', font) for font in os.listdir('fonts/cn')]
-    elif lang == 'ko':
-        return [os.path.join('fonts/ko/', font) for font in os.listdir('fonts/ko')]
-    else:
-        return [os.path.join('fonts/latin', font) for font in os.listdir('fonts/latin')]
+    return [str(Path('fonts') / lang / font) for font in (Path('fonts') / lang).glob('*')]
 
 def main():
     """
@@ -332,7 +329,7 @@ def main():
 
     # Create the directory if it does not exist.
     try:
-        os.makedirs(args.output_dir)
+        Path(args.output_dir).mkdir(exist_ok=True)
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise
@@ -347,7 +344,7 @@ def main():
     if not args.font:
         fonts = load_fonts(args.language)
     else:
-        if os.path.isfile(args.font):
+        if Path(args.font).exists():
             fonts = [args.font]
         else:
             sys.exit("Cannot open font")
@@ -406,10 +403,30 @@ def main():
 
     if args.name_format == 2:
         # Create file with filename-to-label connections
-        with open(os.path.join(args.output_dir, "labels.txt"), 'w', encoding="utf8") as f:
+        with (Path(args.output_dir) / "labels.txt").open('w', encoding="utf8") as f:
             for i in range(string_count):
                 file_name = str(i) + "." + args.extension
                 f.write("{} {}\n".format('data/'+file_name, strings[i]))
+      
+    total_data = []          
+    imgs = Path(args.output_dir).glob('*.jpg')
+
+    for img in imgs:
+        pkl = img.with_suffix('.pkl')
+        with pkl.open('rb') as f:
+            data = pickle.load(f)
+
+        this_data = {
+            'fn' : img.name,
+            'charBB' : data['charBB'],
+            'txt' : data['txt']
+        }
+        total_data.append(this_data)
+
+    with (Path(args.output_dir) / 'gt.pkl').open('wb') as gt:
+        pickle.dump(total_data, gt)
+    print(f'{len(total_data)} data merged!')
+    
 
 if __name__ == '__main__':
     try:
