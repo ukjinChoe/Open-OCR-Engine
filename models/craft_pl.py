@@ -10,30 +10,30 @@ class CRAFT(pl.LightningModule):
         super().__init__()
         self.cfg = cfg
         self.model = CRAFT_()
-        
+
     def forward(self, images):
         output = self.model(images)
         return output
-        
+
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.cfg.lr)
         return optimizer
-        
+
     def training_step(self, batch, batch_num):
         image, weight, weight_affinity, _ = batch
-        
+
         output = self.model(image)
         loss = self.cal_loss(output, weight, weight_affinity)
         self.log('train_loss', loss)
-        
+
         return {'loss': loss}
-    
+
     def validation_step(self, batch, batch_num):
         image, weight, weight_affinity, _ = batch
-        
+
         output = self.model(image)
         loss = self.cal_loss(output, weight, weight_affinity)
-        
+
         if type(output) == list:
             output = torch.cat(output, dim=0)
 
@@ -52,26 +52,29 @@ class CRAFT(pl.LightningModule):
             affinity_threshold=self.cfg.THRESHOLD_AFFINITY,
             word_threshold=self.cfg.THRESHOLD_WORD
         )
-        
+
         fscore, precision, recall = calculate_batch_fscore(
-            predicted_bbox, 
-            target_bbox, 
+            predicted_bbox,
+            target_bbox,
             threshold=self.cfg.THRESHOLD_FSCORE,
             text_target=None
         )
-        
-        self.log('val_loss', loss)
+
+
+        return {'val_loss':loss, 'fscore':fscore,
+                'precision':precision, 'recall':recall}
+
+    def validation_epoch_end(self, outputs):
+        val_loss = sum([x['val_loss'] for x in outputs]) / len(outputs)
+        fscore = sum([x['fscore'] for x in outputs]) / len(outputs)
+        precision = sum([x['precision'] for x in outputs]) / len(outputs)
+        recall = sum([x['recall'] for x in outputs]) / len(outputs)
+
+        self.log('val_loss', val_loss)
         self.log('fscore', fscore)
         self.log('precision', precision)
         self.log('recall', recall)
-        
-        return {'val_loss':loss, 'val_fscore': fscore}
-    
-    def validation_epoch_end(self, outputs):
-        f_score = [x['val_fscore'] for x in outputs]
-        avg_fscore = sum(f_score) / len(f_score)
-        print(f"\nEpoch {self.current_epoch} | avg_fscore:{avg_fscore}\n")
-    
+
     def cal_loss(self, output, character_map, affinity_map):
         """
         :param output: prediction output of the model of shape [batch_size, 2, height, width]
