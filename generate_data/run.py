@@ -297,7 +297,7 @@ def make_dict(lang, inp):
         for line in f:
             for token in re.sub(r, ' ', line.strip()).split(' '):
                 d.add(token)
-    
+
     with (Path('dicts') / (lang + '.txt')).open('w', encoding="utf8", errors='ignore') as f:
         for token in d:
             f.write(token+'\n')
@@ -317,7 +317,7 @@ def load_fonts(lang):
         Load all fonts in the fonts directories
     """
 
-    return [str(Path('fonts') / lang / font) for font in (Path('fonts') / lang).glob('*')]
+    return [str(font) for font in (Path('fonts') / lang).glob('*')]
 
 def main():
     """
@@ -407,8 +407,8 @@ def main():
             for i in range(string_count):
                 file_name = str(i) + "." + args.extension
                 f.write("{} {}\n".format('data/'+file_name, strings[i]))
-      
-    total_data = []          
+
+    total_data = []
     imgs = Path(args.output_dir).glob('*.jpg')
 
     for img in imgs:
@@ -426,10 +426,10 @@ def main():
     with (Path(args.output_dir) / 'gt.pkl').open('wb') as gt:
         pickle.dump(total_data, gt)
     print(f'{len(total_data)} data merged!')
-    
+
 
 if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        raise 
+        raise
