@@ -3,6 +3,7 @@ import torch
 import pytorch_lightning as pl
 from pytorch_lightning.accelerators import accelerator
 from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.plugins import DDPPlugin
 
 from hparams import cfg
 from torch.utils.data import DataLoader, random_split
@@ -50,7 +51,9 @@ if __name__ == "__main__":
 
     n_gpu = torch.cuda.device_count()
 
-    trainer = pl.Trainer(gpus=n_gpu, max_epochs=args.max_epoch, logger=logger, num_sanity_val_steps=1,
-                         accelerator='ddp', callbacks=[ckpt_callback])
+    trainer = pl.Trainer(gpus=n_gpu, max_epochs=args.max_epoch, logger=logger,
+                         num_sanity_val_steps=1, accelerator='ddp',
+                         callbacks=[ckpt_callback],
+                         plugins=DDPPlugin(find_unused_parameters=False))
 
     trainer.fit(model, train_dataloader=trainDataloader, val_dataloaders=validDataloader)
