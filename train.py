@@ -21,30 +21,43 @@ if __name__ == "__main__":
                         help='learning rate for training')
     parser.add_argument('-e', '--max_epoch', type=int, default=100,
                         help='max epoch')
+    parser.add_argument('-nw', '--num_workers', type=int, default=8,
+                        help='number of workers for calling data')
 
     args = parser.parse_args()
     cfg.lr = args.learning_rate
 
     if args.module == 'detector':
         from models.craft_pl import CRAFT
-        from datasets.craft_dataset import DataLoaderSYNTH
+        from datasets.craft_dataset import DatasetSYNTH
         model = CRAFT(cfg)
-        dataset = DataLoaderSYNTH(cfg)
-    elif args.module == 'recognizer':
+        dataset = DatasetSYNTH(cfg)
+        collate = None
+    else:
         from models.deepTextRecog_pl import DeepTextRecog
+        from datasets.recog_dataset import DatasetSYNTH, AlignCollateWithConverter
         model = DeepTextRecog(cfg)
+        dataset = DatasetSYNTH(cfg)
+        collate = AlignCollateWithConverter(cfg, dataset.tokens)
 
     trainSize = int(len(dataset)*0.9)
     trainDataset, validDataset = random_split(dataset, [trainSize, len(dataset)-trainSize])
-    trainDataloader = DataLoader(trainDataset, batch_size=args.batch_size, num_workers=16)
-    validDataloader = DataLoader(validDataset, batch_size=args.batch_size, num_workers=16)
+    trainDataloader = DataLoader(trainDataset,
+                                 batch_size=args.batch_size,
+                                 num_workers=args.num_workers,
+                                 collate_fn=collate)
+    validDataloader = DataLoader(validDataset,
+                                 batch_size=args.batch_size,
+                                 num_workers=args.num_workers,
+                                 collate_fn=collate)
 
-    logger = TensorBoardLogger('tb_logs', name=args.module, version=args.version)
+    logger = TensorBoardLogger('tb_logs', name=args.module,
+                               version=args.version, default_hp_metric=False)
     # lr_callback = pl.callbacks.LearningRateMonitor(logging_interval='step')
     ckpt_callback = pl.callbacks.ModelCheckpoint(
         monitor='fscore',
         dirpath=f'checkpoints/version_{args.version}',
-        filename='checkpoints-{epoch:02d}-{val_fscore:.2f}',
+        filename='checkpoints-{epoch:02d}-{fscore:.2f}',
         save_top_k=3,
         mode='max',
     )
