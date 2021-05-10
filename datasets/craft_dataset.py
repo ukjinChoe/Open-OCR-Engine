@@ -1,4 +1,3 @@
-import torch
 import cv2
 import pickle
 import numpy as np
@@ -6,13 +5,13 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from pathlib import Path
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from utils.data_manipulation import resize, normalize_mean_variance, generate_affinity, generate_target
 
-class DataLoaderSYNTH(Dataset):
+class DatasetSYNTH(Dataset):
     def __init__(self, cfg):
         self.cfg = cfg
-        self.dataPath = Path(cfg.synthDataPath)
+        self.dataPath = Path(cfg.SynthDataPath)
         self.basePath = self.dataPath.parent
 
         with self.dataPath.open('rb') as f:
