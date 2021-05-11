@@ -14,6 +14,8 @@ if __name__ == "__main__":
                         help='module to train')
     parser.add_argument('-v', '--version', type=int, default=0,
                         help='version number')
+    parser.add_argument('-d', '--data_path', type=str, required=True,
+                        help='generated data (.pkl) path')
     parser.add_argument('-bs', '--batch_size', type=int, default=4,
                         help='batch size')
     parser.add_argument('-lr', '--learning_rate', type=float, default=5e-5,

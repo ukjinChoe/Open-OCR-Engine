@@ -53,7 +53,7 @@ This data will be used for training text recognition model.
 - `-l` : language of fonts (language name in `generate_data/fonts` directory)
 - _You can check all options in `generate_data.py`_
 
-+) If you put `--bbox` option, you can visualize the bounding box of all characters. The image samples below are include bounding box visualization. We do not recommend you to put this option for training data.
++) If you put `--bbox` option, you can visualize the bounding box of all characters. The image samples below are include bounding box visualization.I don't recommend you to put this option for training data.
 
 **D) Merge line data to paragraph.**
 
@@ -74,10 +74,10 @@ _Okay. We finished preparing dataset for training._
 
 ## 2. Train Text Detection Model
 
-There are several hyper-parameter of text detection model in `hparams.py`. You need to set `SynthDataPath` with `gt.pkl` file which is in paragraph data.
+There are several hyper-parameters of text detection model in `hparams.py`. I don't recommend you to edit them without knowledge of specific element.
 
 ```
-> python train.py -m detector --version 0 --batch_size 4 --learning_rate 5e-5 --max_epoch 100 --num_workers 4
+> python train.py -m detector --data_path generate_data/out/ko/gt.pkl --version 0 --batch_size 4 --learning_rate 5e-5 --max_epoch 100 --num_workers 4
 ```
 
 To monitor the training progress, use tensorboard.
@@ -100,7 +100,7 @@ Text Recognizer also has some hyper-parameters. Thanks to [deep-text-recognition
 `Prediction`: select Prediction module [CTC | Attn].  
 
 ```
-> python train.py -m recognizer --version 0 --batch_size 64 --learning_rate 1.0 --max_epoch 100 --num_workers 4
+> python train.py -m recognizer --data_path generate_data/out/ko/gt.pkl --version 0 --batch_size 64 --learning_rate 1.0 --max_epoch 100 --num_workers 4
 ```
 
 You can monitor the training progress with tensorboard as well.
@@ -108,6 +108,5 @@ You can monitor the training progress with tensorboard as well.
 ```
 > tensorboard --logdir tb_logs
 ```
-
 
 ## 4. Serve OCR Engine with API

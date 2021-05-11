@@ -12,7 +12,7 @@ from torchvision import transforms
 class DatasetSYNTH(Dataset):
     def __init__(self, cfg):
         self.cfg = cfg
-        self.dataPath = Path(cfg.SynthDataPath)
+        self.dataPath = Path(cfg.data_path)
         self.basePath = self.dataPath.parent
 
         with self.dataPath.open('rb') as f:
