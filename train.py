@@ -29,6 +29,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     cfg.lr = args.learning_rate
+    cfg.data_path = args.data_path
 
     if args.module == 'detector':
         from models.craft_pl import CRAFT
