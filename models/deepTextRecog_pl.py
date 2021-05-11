@@ -12,7 +12,7 @@ class DeepTextRecog(pl.LightningModule):
     def __init__(self, cfg, tokens):
         super(DeepTextRecog, self).__init__()
         self.collate = AlignCollate(cfg)
-        
+
         if 'CTC' in cfg.Prediction:
             self.converter = CTCLabelConverter(tokens)
             self.cal_loss = torch.nn.CTCLoss(zero_infinity=True)
@@ -21,40 +21,44 @@ class DeepTextRecog(pl.LightningModule):
             self.cal_loss = torch.nn.CrossEntropyLoss(ignore_index=0)
 
         cfg.num_class = len(self.converter.tokens)
-        
+
         self.model = DeepTextRecog_(cfg)
         self.cfg = cfg
-        
+
     def forward(self, images):
         output = self.model(images, text=None, is_train=False)
         return output
-        
+
     def configure_optimizers(self):
         optimizer = torch.optim.Adagrad(self.parameters(), lr=self.cfg.lr)
         return optimizer
-        
+
     def training_step(self, batch, batch_num):
         image_tensors, labels = batch
+        image = image_tensors.to(self.device)
         text, length = self.converter.encode(
                 labels, batch_max_length=self.cfg.batch_max_length)
+        batch_size = image.size(0)
+
         if 'CTC' in self.cfg.Prediction:
-            output = self.model(image_tensors, text)
-            output_size = torch.IntTensor([output.size(1)] * self.cfg.batch_size)
+            output = self.model(image, text)
+            output_size = torch.IntTensor([output.size(1)] * batch_size)
             output = output.log_softmax(2).permute(1, 0, 2)
-            loss = self.cal_loss(output, text, output_size, length) / self.cfg.batch_size
+            loss = self.cal_loss(output, text, output_size, length)
         else:
             # align with Attention.forward
-            output = self.model(image_tensors, text[:, :-1])
-            target = text[:, 1:]
-            loss = self.cal_loss(output.view(-1, output.shape[-1]), target.contiguous().view(-1))
-            
+            output = self.model(image, text[:, :-1])
+            target = text[:, 1:].to(self.device)
+            loss = self.cal_loss(output.view(-1, output.shape[-1]),
+                                 target.contiguous().view(-1))
+
         self.log('train_loss', loss)
-            
+
         return {'loss': loss}
-    
+
     def validation_step(self, batch, batch_num):
         image_tensors, labels = batch
-        
+
         batch_size = image_tensors.size(0)
         length_of_data = batch_size
         # For max length prediction
@@ -63,7 +67,7 @@ class DeepTextRecog(pl.LightningModule):
 
         text_for_loss, length_for_loss = self.converter.encode(labels,
                                     batch_max_length=self.cfg.batch_max_length)
-        
+
         if 'CTC' in self.cfg.Prediction:
             preds = self.model(image_tensors, text_for_pred)
 
@@ -75,44 +79,44 @@ class DeepTextRecog(pl.LightningModule):
             # Select max probabilty (greedy decoding) then decode index to character
             _, preds_index = preds.max(2)
             preds_str = self.converter.decode(preds_index.data, preds_size.data)
-        
+
         else:
             preds = self.model(image_tensors, text_for_pred, is_train=False)
 
-            preds = preds[:, :text_for_loss.shape[1] - 1, :]
-            target = text_for_loss[:, 1:]  # without [GO] Symbol
+            preds = preds[:, :text_for_loss.shape[1] - 1, :].to(self.device)
+            target = text_for_loss[:, 1:].to(self.device)  # without [GO] Symbol
             loss = self.cal_loss(preds.contiguous().view(-1, preds.shape[-1]), target.contiguous().view(-1))
 
             # select max probabilty (greedy decoding) then decode index to character
             _, preds_index = preds.max(2)
             preds_str = self.converter.decode(preds_index, length_for_pred)
             labels = self.converter.decode(text_for_loss[:, 1:], length_for_loss)
-            
+
         preds_prob = F.softmax(preds, dim=2)
         preds_max_prob, _ = preds_prob.max(dim=2)
-        
+
         n_correct, norm_ED = self.calculate_acc(labels, preds_str, preds_max_prob)
 
         acc = n_correct / length_of_data * 100
         norm_ED = norm_ED / float(length_of_data)
-          
+
         return {'val_loss': loss, 'acc': acc, 'norm_ED': norm_ED}
-    
+
     def validation_epoch_end(self, outputs):
         val_loss = sum([x['val_loss'] for x in outputs]) / len(outputs)
         acc = sum([x['acc'] for x in outputs]) / len(outputs)
         norm_ED = sum([x['norm_ED'] for x in outputs]) / len(outputs)
-        
+
         self.log('val_loss', val_loss)
-        self.log('acc', acc)    
+        self.log('acc', acc)
         self.log('norm_ED', norm_ED)
-    
+
     def calculate_acc(self, labels, preds_str, preds_max_prob):
         confidence_score_list = []
-        
+
         n_correct = 0
         norm_ED = 0
-        
+
         for gt, pred, pred_max_prob in zip(labels, preds_str, preds_max_prob):
             if 'Attn' in self.cfg.Prediction:
                 gt = gt[:gt.find('[s]')]
@@ -146,5 +150,5 @@ class DeepTextRecog(pl.LightningModule):
             except:
                 confidence_score = 0  # for empty pred case, when prune after "end of sentence" token ([s])
             confidence_score_list.append(confidence_score)
-            
+
         return n_correct, norm_ED

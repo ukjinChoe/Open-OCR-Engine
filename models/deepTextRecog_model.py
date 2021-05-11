@@ -31,7 +31,7 @@ class DeepTextRecog_(nn.Module):
             'output_channel': 512,
             'hidden_size': 256,
         })
-        
+
         self.opt = opt
         self.stages = {'Trans': opt.Transformation, 'Feat': opt.FeatureExtraction,
                        'Seq': opt.SequenceModeling, 'Pred': opt.Prediction}
@@ -41,7 +41,7 @@ class DeepTextRecog_(nn.Module):
             self.Transformation = TPS_SpatialTransformerNetwork(
                 F=opt.num_fiducial,
                 I_size=(opt.imgH, opt.imgW),
-                I_r_size=(opt.imgH, opt.imgW), 
+                I_r_size=(opt.imgH, opt.imgW),
                 I_channel_num=opt.input_channel)
         else:
             print('No Transformation module specified')
@@ -96,6 +96,9 @@ class DeepTextRecog_(nn.Module):
         if self.stages['Pred'] == 'CTC':
             prediction = self.Prediction(contextual_feature.contiguous())
         else:
-            prediction = self.Prediction(contextual_feature.contiguous(), text, is_train, batch_max_length=self.opt.batch_max_length)
+            prediction = self.Prediction(contextual_feature.contiguous(),
+                                         text.to(contextual_feature.device),
+                                         is_train,
+                                         batch_max_length=self.opt.batch_max_length)
 
         return prediction
