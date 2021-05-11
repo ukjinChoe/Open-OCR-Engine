@@ -1,7 +1,6 @@
 import argparse
 import torch
 import pytorch_lightning as pl
-from pytorch_lightning.accelerators import accelerator
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.plugins import DDPPlugin
 
@@ -18,11 +17,13 @@ if __name__ == "__main__":
     parser.add_argument('-bs', '--batch_size', type=int, default=4,
                         help='batch size')
     parser.add_argument('-lr', '--learning_rate', type=float, default=5e-5,
-                        help='learning rate for training')
+                        help='learning rate for training [detector: 5e-5, recognizer: 1.0]')
     parser.add_argument('-e', '--max_epoch', type=int, default=100,
                         help='max epoch')
-    parser.add_argument('-nw', '--num_workers', type=int, default=8,
+    parser.add_argument('-nw', '--num_workers', type=int, default=4,
                         help='number of workers for calling data')
+    parser.add_argument('-rt', '--resume_training', type=str, default=None,
+                        help='resume from certain checkpoint file')
 
     args = parser.parse_args()
     cfg.lr = args.learning_rate
@@ -30,15 +31,15 @@ if __name__ == "__main__":
     if args.module == 'detector':
         from models.craft_pl import CRAFT
         from datasets.craft_dataset import DatasetSYNTH
-        model = CRAFT(cfg)
         dataset = DatasetSYNTH(cfg)
+        model = CRAFT(cfg)
         collate = None
     else:
         from models.deepTextRecog_pl import DeepTextRecog
-        from datasets.recog_dataset import DatasetSYNTH, AlignCollateWithConverter
-        model = DeepTextRecog(cfg)
+        from datasets.deepTextRecog_dataset import DatasetSYNTH
         dataset = DatasetSYNTH(cfg)
-        collate = AlignCollateWithConverter(cfg, dataset.tokens)
+        model = DeepTextRecog(cfg, dataset.tokens)
+        collate = model.collate
 
     trainSize = int(len(dataset)*0.9)
     trainDataset, validDataset = random_split(dataset, [trainSize, len(dataset)-trainSize])
@@ -55,7 +56,7 @@ if __name__ == "__main__":
                                version=args.version, default_hp_metric=False)
     # lr_callback = pl.callbacks.LearningRateMonitor(logging_interval='step')
     ckpt_callback = pl.callbacks.ModelCheckpoint(
-        monitor='fscore',
+        monitor='fscore' if args.module == 'detector' else 'acc',
         dirpath=f'checkpoints/version_{args.version}',
         filename='checkpoints-{epoch:02d}-{fscore:.2f}',
         save_top_k=3,
@@ -67,6 +68,7 @@ if __name__ == "__main__":
     trainer = pl.Trainer(gpus=n_gpu, max_epochs=args.max_epoch, logger=logger,
                          num_sanity_val_steps=1, accelerator='ddp',
                          callbacks=[ckpt_callback],
-                         plugins=DDPPlugin(find_unused_parameters=False))
+                         plugins=DDPPlugin(find_unused_parameters=False),
+                         resume_from_checkpoint=args.resume_training)
 
     trainer.fit(model, train_dataloader=trainDataloader, val_dataloaders=validDataloader)
