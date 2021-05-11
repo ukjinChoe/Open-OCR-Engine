@@ -7,7 +7,7 @@ from utils.misc import calculate_batch_fscore, generate_word_bbox_batch
 
 class CRAFT(pl.LightningModule):
     def __init__(self, cfg):
-        super().__init__()
+        super(CRAFT, self).__init__()
         self.cfg = cfg
         self.model = CRAFT_()
 
