@@ -74,10 +74,10 @@ _Okay. We finished preparing dataset for training._
 
 ## 2. Train Text Detection Model
 
-There are several hyper-parameter of text detection model in `hparams.py`. You need to set `synthDataPath` with `gt.pkl` file which is in paragraph data.
+There are several hyper-parameter of text detection model in `hparams.py`. You need to set `SynthDataPath` with `gt.pkl` file which is in paragraph data.
 
 ```
-> python train.py -m detector --version 0 --batch_size 4 --learning_rate 5e-5 --max_epoch 100
+> python train.py -m detector --version 0 --batch_size 4 --learning_rate 5e-5 --max_epoch 100 --num_workers 4
 ```
 
 To monitor the training progress, use tensorboard.
@@ -86,6 +86,28 @@ To monitor the training progress, use tensorboard.
 > tensorboard --logdir tb_logs
 ```
 
+![](https://www.dropbox.com/s/dxky1qf1oz83v20/craft_train_log.jpg?raw=1)
+
 ## 3. Train Text Recognition Model
+
+Text Recognizer also has some hyper-parameters. Thanks to [deep-text-recognition-benchmark](https://github.com/clovaai/deep-text-recognition-benchmark), It's really easy to change parts which consist recognzier. 
+
+### Modules
+
+`Transformation`: select Transformation module [None | TPS].  
+`FeatureExtraction`: select FeatureExtraction module [VGG | RCNN | ResNet].  
+`SequenceModeling`: select SequenceModeling module [None | BiLSTM].  
+`Prediction`: select Prediction module [CTC | Attn].  
+
+```
+> python train.py -m recognizer --version 0 --batch_size 64 --learning_rate 1.0 --max_epoch 100 --num_workers 4
+```
+
+You can monitor the training progress with tensorboard as well.
+
+```
+> tensorboard --logdir tb_logs
+```
+
 
 ## 4. Serve OCR Engine with API
