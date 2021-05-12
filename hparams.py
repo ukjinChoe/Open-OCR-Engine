@@ -11,6 +11,7 @@ cfg = EasyDict({
     
     # Deep-Text-Recognition Configs
     'PAD' : False,
+    'is_character' : True,
     'Transformation' : 'TPS',
     'FeatureExtraction' : 'ResNet',
     'SequenceModeling' : 'BiLSTM',
