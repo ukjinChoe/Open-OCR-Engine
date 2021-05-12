@@ -8,8 +8,6 @@ from tqdm import tqdm
 from PIL import Image, ImageDraw
 from pathlib import Path
 
-base = 'out/vertical' #sys.argv[1]  # image directory
-width = 1000 #int(sys.argv[2])  # target image width
 
 def cutList(li, mini=2, maxi=6):
     chunk_size = []
@@ -148,6 +146,6 @@ if __name__ == "__main__":
         combined = combineHorizontal(chunk, args.base, args.height)
 
 
-    with (Path(base)/'gt.pkl').open('wb') as gt:
+    with (Path(args.base)/'merged_gt.pkl').open('wb') as gt:
         pickle.dump(combined, gt)
             
