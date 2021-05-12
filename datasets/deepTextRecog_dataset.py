@@ -21,11 +21,13 @@ class DatasetSYNTH(Dataset):
         self.imnames, self.txt = [], []
         for d in tqdm(dsets, total=len(dsets), desc="loading dataset"):
             self.imnames.append(d['fn'])
-            self.txt.append(re.sub(' +', ' ', d['txt']))
+            self.txt.append(re.sub(' +', ' ', d['txt'].strip()[:cfg.batch_max_length]))
             
         self.tokens = set()
         for txt in self.txt:
-            for token in txt.strip().split(' '):
+            if not cfg.is_character:
+                txt = txt.split(' ')
+            for token in txt:
                 self.tokens.add(token)
         self.tokens = list(self.tokens)
                 

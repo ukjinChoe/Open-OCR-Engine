@@ -5,9 +5,10 @@ import re
 class CTCLabelConverter(object):
     """ Convert between text-label and text-index """
 
-    def __init__(self, tokens):
+    def __init__(self, tokens, is_character):
         # token (str): set of the possible tokens.
         self.dict = {}
+        self.is_character = is_character
         for i, token in enumerate(tokens):
             # NOTE: 0 is reserved for 'CTCblank' token required by CTCLoss
             self.dict[token] = i + 1
@@ -29,7 +30,7 @@ class CTCLabelConverter(object):
         # The index used for padding (=0) would not affect the CTC loss calculation.
         batch_text = torch.LongTensor(len(text), batch_max_length).fill_(0)
         for i, t in enumerate(text):
-            text = re.sub(r' +', ' ', t).strip().split(' ')
+            text = list(t) if self.is_character else t.split(' ')
             text = [self.dict[char] for char in text]
             batch_text[i][:len(text)] = torch.LongTensor(text)
         return (batch_text, torch.IntTensor(length))
@@ -53,11 +54,12 @@ class CTCLabelConverter(object):
 class AttnLabelConverter(object):
     """ Convert between text-label and text-index """
 
-    def __init__(self, tokens):
+    def __init__(self, tokens, is_character):
         # token (str): set of the possible tokens.
         # [GO] for the start token of the attention decoder. [s] for end-of-sentence token.
         list_token = ['[GO]', '[s]']  # ['[s]','[UNK]','[PAD]','[GO]']
 
+        self.is_character = is_character
         self.tokens = list_token + tokens
 
         self.dict = {}
@@ -83,7 +85,7 @@ class AttnLabelConverter(object):
         batch_text = torch.LongTensor(len(text), batch_max_length + 1).fill_(0)
         
         for i, t in enumerate(text):
-            text = re.sub(r' +', ' ', t).strip().split(' ')
+            text = list(t) if self.is_character else t.split(' ')
             text.append('[s]')
             text = [self.dict[char] for char in text]
             batch_text[i][1:1 + len(text)] = torch.LongTensor(text)  # batch_text[:, 0] = [GO] token

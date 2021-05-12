@@ -14,10 +14,10 @@ class DeepTextRecog(pl.LightningModule):
         self.collate = AlignCollate(cfg)
 
         if 'CTC' in cfg.Prediction:
-            self.converter = CTCLabelConverter(tokens)
+            self.converter = CTCLabelConverter(tokens, cfg.is_character)
             self.cal_loss = torch.nn.CTCLoss(zero_infinity=True)
         else:
-            self.converter = AttnLabelConverter(tokens)
+            self.converter = AttnLabelConverter(tokens, cfg.is_character)
             self.cal_loss = torch.nn.CrossEntropyLoss(ignore_index=0)
 
         cfg.num_class = len(self.converter.tokens)
