@@ -1,6 +1,7 @@
 import torch
 import re
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class CTCLabelConverter(object):
     """ Convert between text-label and text-index """
@@ -54,18 +55,18 @@ class CTCLabelConverter(object):
 class AttnLabelConverter(object):
     """ Convert between text-label and text-index """
 
-    def __init__(self, tokens, is_character):
-        # token (str): set of the possible tokens.
+    def __init__(self, character, is_character):
+        # character (str): set of the possible characters.
         # [GO] for the start token of the attention decoder. [s] for end-of-sentence token.
         list_token = ['[GO]', '[s]']  # ['[s]','[UNK]','[PAD]','[GO]']
+        list_character = list(character)
+        self.tokens = list_token + list_character
 
         self.is_character = is_character
-        self.tokens = list_token + tokens
-
         self.dict = {}
-        for i, token in enumerate(self.tokens):
+        for i, char in enumerate(self.tokens):
             # print(i, char)
-            self.dict[token] = i
+            self.dict[char] = i
 
     def encode(self, text, batch_max_length=25):
         """ convert text-label into text-index.
@@ -83,13 +84,12 @@ class AttnLabelConverter(object):
         batch_max_length += 1
         # additional +1 for [GO] at first step. batch_text is padded with [GO] token after [s] token.
         batch_text = torch.LongTensor(len(text), batch_max_length + 1).fill_(0)
-        
         for i, t in enumerate(text):
             text = list(t) if self.is_character else t.split(' ')
             text.append('[s]')
             text = [self.dict[char] for char in text]
             batch_text[i][1:1 + len(text)] = torch.LongTensor(text)  # batch_text[:, 0] = [GO] token
-        return (batch_text, torch.IntTensor(length))
+        return (batch_text.to(device), torch.IntTensor(length).to(device))
 
     def decode(self, text_index, length):
         """ convert text-index into text-label. """
