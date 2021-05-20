@@ -17,7 +17,7 @@ cfg = EasyDict({
     'SequenceModeling' : 'BiLSTM',
     'Prediction' : 'Attn',
     'imgH': 36,
-    'imgW': 100,
+    'imgW': 200,
     'batch_max_length': 25,
     'input_channel': 1,
 })
