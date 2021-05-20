@@ -40,25 +40,24 @@ class DatasetSYNTH(Dataset):
     def __getitem__(self, item):
         item = item % len(self.imnames)
         image = Image.open(self.basePath / self.imnames[item])  # Read the image
-        image = image.convert('L' if self.cfg.input_channel == 1 else 'RGB')
+        image = image.convert('L' if self.cfg.input_channel==1 else 'RGB')
         txt = self.txt[item]
         
         return image, txt
         
 class AlignCollate(object):
-    def __init__(self, cfg, imgH=32, imgW=100):
-        self.imgH = imgH
-        self.imgW = imgW
+    def __init__(self, cfg):
+        self.cfg = cfg
+        self.imgH = cfg.imgH
+        self.imgW = cfg.imgW
         self.keep_ratio_with_pad = cfg.PAD
 
     def __call__(self, batch):
-        batch = filter(lambda x: x is not None, batch)
         images, labels = zip(*batch)
 
         if self.keep_ratio_with_pad:  # same concept with 'Rosetta' paper
             resized_max_w = self.imgW
-            input_channel = 3 if images[0].mode == 'RGB' else 1
-            transform = NormalizePAD((input_channel, self.imgH, resized_max_w))
+            transform = NormalizePAD((self.cfg.input_channel, self.imgH, resized_max_w))
 
             resized_images = []
             for image in images:
@@ -90,7 +89,7 @@ class ResizeNormalize(object):
     def __call__(self, img):
         img = img.resize(self.size, self.interpolation)
         img = self.toTensor(img)
-        img.sub_(0.5).div_(0.5)
+        img.sub_(0.5).div_(0.5)  # -1.0 ~ 1.0
         return img
         
 class NormalizePAD(object):

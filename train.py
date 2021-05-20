@@ -28,8 +28,11 @@ if __name__ == "__main__":
                         help='resume from certain checkpoint file')
 
     args = parser.parse_args()
+    
     cfg.lr = args.learning_rate
     cfg.data_path = args.data_path
+    
+    print('configs:', cfg)
 
     if args.module == 'detector':
         from models.craft_pl import CRAFT
@@ -39,10 +42,10 @@ if __name__ == "__main__":
         collate = None
     else:
         from models.deepTextRecog_pl import DeepTextRecog
-        from datasets.deepTextRecog_dataset import DatasetSYNTH
+        from datasets.deepTextRecog_dataset import DatasetSYNTH, AlignCollate
         dataset = DatasetSYNTH(cfg)
         model = DeepTextRecog(cfg, dataset.tokens)
-        collate = model.collate
+        collate = AlignCollate(cfg)
 
     trainSize = int(len(dataset)*0.9)
     trainDataset, validDataset = random_split(dataset, [trainSize, len(dataset)-trainSize])
@@ -58,10 +61,16 @@ if __name__ == "__main__":
     logger = TensorBoardLogger('tb_logs', name=args.module,
                                version=args.version, default_hp_metric=False)
     # lr_callback = pl.callbacks.LearningRateMonitor(logging_interval='step')
+    
+    if args.module == 'detector':
+        filename='checkpoints-{epoch:02d}-{fscore:.2f}'
+    else:
+        filename='checkpoints-{epoch:02d}-{acc:.2f}'
+    
     ckpt_callback = pl.callbacks.ModelCheckpoint(
         monitor='fscore' if args.module == 'detector' else 'acc',
         dirpath=f'checkpoints/version_{args.version}',
-        filename='checkpoints-{epoch:02d}-{fscore:.2f}',
+        filename=filename,
         save_top_k=3,
         mode='max',
     )
@@ -72,6 +81,7 @@ if __name__ == "__main__":
                          num_sanity_val_steps=1, accelerator='ddp',
                          callbacks=[ckpt_callback],
                          plugins=DDPPlugin(find_unused_parameters=False),
+                         gradient_clip_val=5.0,
                          resume_from_checkpoint=args.resume_training)
 
     trainer.fit(model, train_dataloader=trainDataloader, val_dataloaders=validDataloader)
