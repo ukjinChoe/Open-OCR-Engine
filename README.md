@@ -77,14 +77,16 @@ To train text recognition model, we will generate word data. It's just like gene
 
 ```
 > cd generate_data
-> python split_word.py texts/ko-corpus.txt
+> python split_word.py --input texts/ko-corpus.txt --output texts/word_split.txt --max_lne 20
 ```
 
-Then you can get word splited data in parent directory of the corpus named `word_split_corpus.txt`. Now, let's generate images as before. 
+Then you can get word splited corpus data. Now, let's generate images as before. 
 
 ```
-> python run.py -i texts/word_split_corpus.txt -l ko -nd -c 500000 -f 200 -rs -w 20 -t 1 -bl 2 -rbl -k 1 -rk -na 2 --output_dir out/word
+> python run.py -i texts/word_split.txt -l ko -nd -c 500000 -f 200 -rs -w 20 -t 1 -bl 2 -rbl -k 1 -rk -na 2 --output_dir out/word
 ```
+![](https://www.dropbox.com/s/09ef5wilkaak8xm/generated_word_sample_0.jpg?raw=1)
+![](https://www.dropbox.com/s/3xvj1pctwv8qbu6/generated_word_sample_1.jpg?raw=1)
 
 _Okay. We finished preparing dataset for training._
 
