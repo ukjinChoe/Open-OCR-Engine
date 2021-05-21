@@ -41,7 +41,8 @@ class DeepTextRecog(pl.LightningModule):
                 F=cfg.num_fiducial,
                 I_size=(cfg.imgH, cfg.imgW),
                 I_r_size=(cfg.imgH, cfg.imgW),
-                I_channel_num=cfg.input_channel)
+                I_channel_num=cfg.input_channel,
+            )
         else:
             print('No Transformation module specified')
 
@@ -71,7 +72,7 @@ class DeepTextRecog(pl.LightningModule):
         if cfg.Prediction == 'CTC':
             self.Prediction = torch.nn.Linear(self.SequenceModeling_output, cfg.num_class)
         elif cfg.Prediction == 'Attn':
-            self.Prediction = Attention(self.SequenceModeling_output, cfg.hidden_size, cfg.num_class)
+            self.Prediction = Attention(self.SequenceModeling_output, cfg)
         else:
             raise Exception('Prediction is neither CTC or Attn')
 
@@ -109,7 +110,7 @@ class DeepTextRecog(pl.LightningModule):
             filtered_parameters.append(p)
             params_num.append(np.prod(p.size()))
         print('Trainable params num : ', sum(params_num))
-        
+
         optimizer = torch.optim.Adadelta(filtered_parameters,
                                         lr=self.cfg.lr,
                                         rho=0.95,
@@ -145,7 +146,7 @@ class DeepTextRecog(pl.LightningModule):
         image = image_tensors.to(self.device)
 
         batch_size = image_tensors.size(0)
-        
+
         # For max length prediction
         length_for_pred = torch.IntTensor([self.cfg.batch_max_length] * batch_size).to(self.device)
         text_for_pred = torch.LongTensor(batch_size, self.cfg.batch_max_length + 1).fill_(0).to(self.device)
@@ -159,13 +160,13 @@ class DeepTextRecog(pl.LightningModule):
             # Calculate evaluation loss for CTC deocder.
             preds_size = torch.IntTensor([preds.size(1)] * batch_size)
             # permute 'preds' to use CTCloss format
-            cost = self.criterion(preds.log_softmax(2).permute(1, 0, 2), 
+            cost = self.criterion(preds.log_softmax(2).permute(1, 0, 2),
                                   text_for_loss, preds_size, length_for_loss)
 
             # Select max probabilty (greedy decoding) then decode index to character
             _, preds_index = preds.max(2)
             preds_str = self.converter.decode(preds_index.data, preds_size.data)
-        
+
         else:
             preds = self(image, text_for_pred, is_train=False)
 
@@ -184,7 +185,7 @@ class DeepTextRecog(pl.LightningModule):
 
         n_correct = 0
         norm_ED = 0
-        
+
         for gt, pred, pred_max_prob in zip(labels, preds_str, preds_max_prob):
             if 'Attn' in self.cfg.Prediction:
                 gt = gt[:gt.find('[s]')]
