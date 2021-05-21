@@ -77,8 +77,10 @@ if __name__ == "__main__":
 
     n_gpu = torch.cuda.device_count()
 
-    trainer = pl.Trainer(gpus=n_gpu, max_epochs=args.max_epoch, logger=logger,
-                         num_sanity_val_steps=1, accelerator='ddp',
+    trainer = pl.Trainer(gpus=n_gpu if args.module=='detector' else 1,
+                         max_epochs=args.max_epoch, logger=logger,
+                         num_sanity_val_steps=1, accelerator='ddp2',
+                         num_nodes=1 if args.module=='detector' else n_gpu,
                          callbacks=[ckpt_callback],
                          plugins=DDPPlugin(find_unused_parameters=False),
                          gradient_clip_val=5.0,
