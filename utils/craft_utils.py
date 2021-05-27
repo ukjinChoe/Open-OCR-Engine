@@ -399,3 +399,39 @@ def hard_negative_mining(pred, target, cfg):
 
     return (positive_loss.sum() + negative_loss[negative_loss_cpu].sum()) / (
                 positive_loss.shape[0] + negative_loss_cpu.shape[0])
+    
+def Heatmap2Box(args, config):
+        score_text, score_link, resize_info = args
+        boxes, _ = getDetBoxes(score_text, score_link,
+            config['THRESHOLD_CHARACTER'], config['THRESHOLD_AFFINITY'],
+            config['THRESHOLD_WORD'], poly=False)
+
+        width, height = list(map(int, resize_info['original_wh']))
+        top, left = resize_info['top'], resize_info['left']
+        max_side = max(height, width)
+
+        boxes = np.array(boxes)
+        for k in range(len(boxes)):
+            boxes[k] -= (384*(1-float(width)/max_side)/2, 384*(1-float(height)/max_side)/2)
+
+        boxes = adjustResultCoordinates(boxes, float(max_side)/384, float(max_side)/384, top, left, ratio_net=1)
+
+        res = []
+        for box in boxes:
+            lx, ly, rx, ry = box
+            lx, ly, rx, ry = min(lx, rx), min(ly, ry), max(lx, rx), max(ly, ry)
+            box = [lx, ly, rx, ry]
+            if box.w and box.h:
+                res.append(box)
+
+        res = [box for box in res if box.w > 0 and box.h > 0]
+        return res
+    
+def adjustResultCoordinates(polys, ratio_w, ratio_h, top, left, ratio_net = 2):
+    if len(polys) > 0:
+        polys = np.array(polys)
+        for k in range(len(polys)):
+            if polys[k] is not None:
+                polys[k] *= (ratio_w * ratio_net, ratio_h * ratio_net)
+                # polys[k] -= (left, top)
+    return polys

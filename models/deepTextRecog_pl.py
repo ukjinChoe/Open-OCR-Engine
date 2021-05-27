@@ -102,6 +102,12 @@ class DeepTextRecog(pl.LightningModule):
                                          batch_max_length=self.cfg.batch_max_length)
 
         return prediction
+    
+    def get_text(self, preds):
+        _, preds_index = preds.max(2)
+        length_for_pred = [self.cfg.batch_max_length]*preds.size(0)
+        texts = self.converter.decode(preds_index, length_for_pred)
+        return texts
 
     def configure_optimizers(self):
         filtered_parameters = []
