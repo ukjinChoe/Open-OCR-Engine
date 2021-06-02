@@ -132,4 +132,33 @@ You can monitor the training progress with tensorboard as well.
 > tensorboard --logdir tb_logs
 ```
 
+![](https://www.dropbox.com/s/4ye357otthla0c9/DTR_train_log.jpg?raw=1)  
+_In the log screenshot, accuracy calculated by exact match cases._  
+
 ## 4. Serve OCR Engine with API
+
+Okay, It's time to deploy your OCR-Engine. Before run API server, let's modify some hyper-parameters for prediction stage. Decreasing each thresholds would be better for most test cases.
+
+```
+# in hparams.py
+
+'THRESHOLD_WORD' : 0.4,
+'THRESHOLD_CHARACTER': 0.4,
+'THRESHOLD_AFFINITY': 0.2
+```
+
+Then, start API server with `demo.py`. Specify each checkpoints you trained with parameters.
+
+```
+python demo.py --host 12.0.0.1 --port 5000 --detector_ckpt <detector checkpoint path> --recognizer_ckpt <recognizer checkpoint path> --vocab vocab.txt
+```
+
+Then your OCR-Engine server has been started. 
+
+You can send API request by using `request.py`.
+
+```
+python request.py <img path>
+```
+
+Then you will get text and coordinate by response.
