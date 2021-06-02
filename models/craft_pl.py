@@ -9,7 +9,8 @@ from collections import namedtuple
 
 import pytorch_lightning as pl
 
-from utils.craft_utils import hard_negative_mining, normalizeMeanVariance, Heatmap2Box
+from utils.data_manipulation import resize, normalize_mean_variance
+from utils.craft_utils import hard_negative_mining, Heatmap2Box
 from utils.misc import calculate_batch_fscore, generate_word_bbox_batch
 
 
@@ -155,8 +156,7 @@ class CRAFT(pl.LightningModule):
 
         return all_loss
     
-    def preprocessImage(self, image):
-        # image = cv2.imread(io.BytesIO(img))
+    def preprocessImage(self, image, side=768):
         if len(image.shape) == 2:
             image = np.repeat(image[:, :, None], repeats=3, axis=2)
         elif image.shape[2] == 1:
@@ -168,22 +168,26 @@ class CRAFT(pl.LightningModule):
         color=(114, 114, 114)
 
         height, width, channel = image.shape
-        ratio = min(target_size[1] / height, target_size[0] / width)
-
-        image = cv2.resize(image, (int(width*ratio), int(height*ratio)), interpolation=cv2.INTER_CUBIC)
-
-        dw = (target_size[0] - image.shape[1]) / 2
-        dh = (target_size[1] - image.shape[0]) / 2
-
-        top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
-        left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
-        image = cv2.copyMakeBorder(image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
         
-        image = normalizeMeanVariance(image).transpose(2, 0, 1)
+        if self.cfg.PAD:
+            ratio = min(target_size[1] / height, target_size[0] / width)
+
+            image = cv2.resize(image, (int(width*ratio), int(height*ratio)), interpolation=cv2.INTER_CUBIC)
+
+            dw = (target_size[0] - image.shape[1]) / 2
+            dh = (target_size[1] - image.shape[0]) / 2
+
+            top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
+            left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
+            image = cv2.copyMakeBorder(image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
+        else:
+            image = cv2.resize(image, (side, side), interpolation=cv2.INTER_CUBIC)
+            
+        image = normalize_mean_variance(image).transpose(2, 0, 1)
         image = np.ascontiguousarray(image)
         image = torch.from_numpy(image).unsqueeze(0)
 
-        return image, {'original_wh': (width, height), 'ratio': ratio, 'top': top, 'left':left}
+        return image, (width, height)
     
     def get_boxes(self, output, resize_info):
         scoreText = output[0][0, :, :].data.cpu().numpy()

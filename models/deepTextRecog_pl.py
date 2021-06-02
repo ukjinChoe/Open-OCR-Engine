@@ -104,9 +104,41 @@ class DeepTextRecog(pl.LightningModule):
         return prediction
     
     def get_text(self, preds):
-        _, preds_index = preds.max(2)
+        batch_size = preds.size(0)
         length_for_pred = [self.cfg.batch_max_length]*preds.size(0)
-        texts = self.converter.decode(preds_index, length_for_pred)
+        
+        texts = []
+        if 'CTC' in self.cfg.Prediction:
+
+            # Select max probabilty (greedy decoding) then decode index to character
+            preds_size = torch.IntTensor([preds.size(1)] * batch_size)
+            _, preds_index = preds.max(2)
+            preds_index = preds_index.view(-1)
+            preds_str = self.converter.decode(preds_index.data, preds_size.data)
+
+        else:
+            # select max probabilty (greedy decoding) then decode index to character
+            _, preds_index = preds.max(2)
+            preds_str = self.converter.decode(preds_index, length_for_pred)
+
+        preds_prob = F.softmax(preds, dim=2)
+        preds_max_prob, _ = preds_prob.max(dim=2)
+
+        texts = []
+        for order, tup in enumerate(zip(preds_str, preds_max_prob)):
+            pred, pred_max_prob = tup
+            if 'Attn' in self.cfg.Prediction:
+                pred_EOS = pred.find('[s]')
+                pred = pred[:pred_EOS]  # prune after "end of sentence" token ([s])
+                texts.append(pred)
+                # pred_max_prob = pred_max_prob[:pred_EOS]
+                
+                ''' you can use confidence scroe '''
+                # try:
+                #     confidence_score = float(pred_max_prob.cumprod(dim=0)[-1])
+                # except IndexError:
+                #     confidence_score = 0.1
+    
         return texts
 
     def configure_optimizers(self):
