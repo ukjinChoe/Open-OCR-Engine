@@ -7,10 +7,10 @@ cfg = EasyDict({
     'THRESHOLD_FSCORE': 0.5,
     'THRESHOLD_WORD' : 0.7,
     'THRESHOLD_CHARACTER': 0.7,
-    'THRESHOLD_AFFINITY': 0.7,
+    'THRESHOLD_AFFINITY': 0.3,
     
     # Deep-Text-Recognition Configs
-    'PAD' : False,
+    'PAD' : True,
     'is_character' : True,
     'Transformation' : 'TPS',
     'FeatureExtraction' : 'ResNet',
