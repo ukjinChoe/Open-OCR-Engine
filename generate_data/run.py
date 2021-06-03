@@ -283,7 +283,18 @@ def parse_arguments():
         action="store_true",
         help="Do not save bbox with pickle files"
     )
-
+    parser.add_argument(
+        "--min_char",
+        type=int,
+        default=10,
+        help="Minimum number of character in a line"
+    )
+    parser.add_argument(
+        "--max_char",
+        type=int,
+        default=40,
+        help="Maximum number of character in a line"
+    )
 
     return parser.parse_args()
 
@@ -355,7 +366,7 @@ def main():
     if args.use_wikipedia:
         strings = create_strings_from_wikipedia(args.length, args.count, args.language)
     elif args.input_file != '':
-        strings = create_strings_from_file(args.input_file, args.count)
+        strings = create_strings_from_file(args.input_file, args.count, args.min_char, args.max_char)
     elif args.random_sequences:
         strings = create_strings_randomly(args.length, args.random, args.count,
                                           args.include_letters, args.include_numbers, args.include_symbols, args.language)

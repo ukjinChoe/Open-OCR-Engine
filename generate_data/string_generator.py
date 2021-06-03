@@ -5,7 +5,7 @@ import requests
 
 from bs4 import BeautifulSoup
 
-def create_strings_from_file(filename, count):
+def create_strings_from_file(filename, count, mini=10, maxi=40):
     """
         Create all strings by reading lines in specified files
     """
@@ -13,7 +13,7 @@ def create_strings_from_file(filename, count):
     strings = []
 
     with open(filename, 'r', encoding="utf8") as f:
-        lines = [l[0:40] for l in f.read().splitlines() if len(l) > 0]
+        lines = [l[:maxi] for l in f if mini < len(l)]
         rnd.shuffle(lines)
         if len(lines) == 0:
             raise Exception("No lines could be read in file")
