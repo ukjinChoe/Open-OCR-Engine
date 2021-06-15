@@ -12,17 +12,20 @@ from torchvision import transforms
 class DatasetSYNTH(Dataset):
     def __init__(self, cfg):
         self.cfg = cfg
-        self.dataPath = Path(cfg.data_path)
-        self.basePath = self.dataPath.parent
 
-        with self.dataPath.open('rb') as f:
-            dsets = pickle.load(f)
+        with open(cfg.data_path, 'rb') as f:
+            data = pickle.load(f)
+
+        self.imagePath = Path(cfg.data_path).parent
 
         self.imnames, self.txt = [], []
-        for d in tqdm(dsets, total=len(dsets), desc="loading dataset"):
-            self.imnames.append(d['fn'])
-            self.txt.append(re.sub(' +', ' ', d['txt'].strip()[:cfg.batch_max_length]))
-            
+        for fn, label in data:
+            if len(label) <= cfg.batch_max_length:
+                self.imnames.append(fn)
+                self.txt.append(label)
+            else:
+                print(f'label of {fn} is longer than batch_max_length')
+
         self.tokens = set()
         for txt in self.txt:
             if not cfg.is_character:
@@ -30,7 +33,7 @@ class DatasetSYNTH(Dataset):
             for token in txt:
                 self.tokens.add(token)
         self.tokens = list(self.tokens)
-                
+
         with open('vocab.txt', 'w', encoding='utf8') as f:
             f.write(' '.join(self.tokens))
 
@@ -39,12 +42,12 @@ class DatasetSYNTH(Dataset):
 
     def __getitem__(self, item):
         item = item % len(self.imnames)
-        image = Image.open(self.basePath / self.imnames[item])  # Read the image
+        image = Image.open(self.imagePath / self.imnames[item])  # Read the image
         image = image.convert('L' if self.cfg.input_channel==1 else 'RGB')
         txt = self.txt[item]
-        
+
         return image, txt
-        
+
 class AlignCollate(object):
     def __init__(self, cfg):
         self.cfg = cfg
@@ -91,7 +94,7 @@ class ResizeNormalize(object):
         img = self.toTensor(img)
         img.sub_(0.5).div_(0.5)  # -1.0 ~ 1.0
         return img
-        
+
 class NormalizePAD(object):
     def __init__(self, max_size, PAD_type='right'):
         self.toTensor = transforms.ToTensor()
