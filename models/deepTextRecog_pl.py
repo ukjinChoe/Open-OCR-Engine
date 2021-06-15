@@ -97,16 +97,16 @@ class DeepTextRecog(pl.LightningModule):
             prediction = self.Prediction(contextual_feature.contiguous())
         else:
             prediction = self.Prediction(contextual_feature.contiguous(),
-                                         text,
+                                         text.to(self.device),
                                          is_train,
                                          batch_max_length=self.cfg.batch_max_length)
 
         return prediction
-    
+
     def get_text(self, preds):
         batch_size = preds.size(0)
         length_for_pred = [self.cfg.batch_max_length]*preds.size(0)
-        
+
         texts = []
         if 'CTC' in self.cfg.Prediction:
 
@@ -132,13 +132,13 @@ class DeepTextRecog(pl.LightningModule):
                 pred = pred[:pred_EOS]  # prune after "end of sentence" token ([s])
                 texts.append(pred)
                 # pred_max_prob = pred_max_prob[:pred_EOS]
-                
+
                 ''' you can use confidence scroe '''
                 # try:
                 #     confidence_score = float(pred_max_prob.cumprod(dim=0)[-1])
                 # except IndexError:
                 #     confidence_score = 0.1
-    
+
         return texts
 
     def configure_optimizers(self):
@@ -172,7 +172,7 @@ class DeepTextRecog(pl.LightningModule):
         else:
             # align with Attention.forward
             preds = self(image, text[:, :-1], is_train=True)
-            target = text[:, 1:]  # without [GO] Symbol
+            target = text[:, 1:].to(self.device)  # without [GO] Symbol
             cost = self.criterion(preds.view(-1, preds.shape[-1]), target.contiguous().view(-1))
 
         self.log('train_loss', cost)
@@ -181,7 +181,7 @@ class DeepTextRecog(pl.LightningModule):
 
     def validation_step(self, batch, batch_num):
         image_tensors, labels = batch
-        image = image_tensors.to(self.device)
+        image = image_tensors
 
         batch_size = image_tensors.size(0)
 
@@ -209,7 +209,7 @@ class DeepTextRecog(pl.LightningModule):
             preds = self(image, text_for_pred, is_train=False)
 
             preds = preds[:, :text_for_loss.shape[1] - 1, :]
-            target = text_for_loss[:, 1:]  # without [GO] Symbol
+            target = text_for_loss[:, 1:].to(self.device)  # without [GO] Symbol
             cost = self.criterion(preds.contiguous().view(-1, preds.shape[-1]),
                                   target.contiguous().view(-1))
 
