@@ -13,13 +13,15 @@ def create_strings_from_file(filename, count, mini=10, maxi=40):
     strings = []
 
     with open(filename, 'r', encoding="utf8") as f:
-        lines = [l[:maxi] for l in f if mini < len(l)]
+        lines = [' '.join(l.strip().split()) for l in f]
+        lines = [l[:maxi] for l in lines if len(l) > mini]
+
         rnd.shuffle(lines)
         if len(lines) == 0:
             raise Exception("No lines could be read in file")
         while len(strings) < count:
             if len(lines) >= count - len(strings):
-                strings.extend(lines[0:count - len(strings)])
+                strings.extend(lines[:count - len(strings)])
             else:
                 strings.extend(lines)
 
