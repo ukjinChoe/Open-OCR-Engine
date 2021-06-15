@@ -17,13 +17,13 @@ def cutList(li, mini=2, maxi=6):
             break
         cs = random.randint(mini, maxi)
         chunk_size.append(cs)
-    
+
     res = []
     acc = 0
     for cs in chunk_size:
         res.append(li[acc:acc+cs])
-        acc += cs 
-    
+        acc += cs
+
     return res
 
 def combineHorizontal(chunk_list:"list of img data", base, height):
@@ -32,7 +32,7 @@ def combineHorizontal(chunk_list:"list of img data", base, height):
         imgs = [Image.open(Path(base) / data['fn']) for data in chunk]
         charBB = [data['charBB'] for data in chunk]
         txt = [data['txt'] for data in chunk]
-        
+
         resize_ratio = [height/img.size[1] for img in imgs]
         resized_imgs = [img.resize(tuple(map(lambda x: round(x*resize_ratio[i]), img.size))) for i, img in enumerate(imgs)]
         resized_imgs = [np.asarray(img) for img in resized_imgs]
@@ -44,19 +44,18 @@ def combineHorizontal(chunk_list:"list of img data", base, height):
             bar = np.rollaxis(foo, axis=2)
             acc += resized_imgs[i].shape[1]
             accumulated_charBB.append(bar)
-        
+
         combined_img = Image.fromarray(np.hstack(resized_imgs))
         combined_charBB = np.dstack(accumulated_charBB)
         combined_txt = "\n".join(txt)
 
-        (Path(base) / 'combined').mkdir(parents=True, exist_ok=True)
         combined_img_path = Path(base) / 'combined' / (str(idx)+'.jpg')
 
         # pdraw = ImageDraw.Draw(combined_img)
         # for bbox in np.transpose(combined_charBB, (2,1,0)):
         #     foo = [tuple(pt) for pt in bbox]
         #     pdraw.line(foo+foo[:1], fill='red', width=2)
-        
+
         combined_img.save(str(combined_img_path))
 
         new_data = {
@@ -73,7 +72,7 @@ def combineVertical(chunk_list:"list of img data", base, width):
         imgs = [Image.open(Path(base) / data['fn']) for data in chunk]
         charBB = [data['charBB'] for data in chunk]
         txt = [data['txt'] for data in chunk]
-        
+
         resize_ratio = [width/img.size[0] for img in imgs]
         resized_imgs = [img.resize(tuple(map(lambda x: round(x*resize_ratio[i]), img.size))) for i, img in enumerate(imgs)]
         resized_imgs = [np.asarray(img) for img in resized_imgs]
@@ -85,19 +84,18 @@ def combineVertical(chunk_list:"list of img data", base, width):
             bar = np.rollaxis(foo, axis=2)
             acc += resized_imgs[i].shape[0]
             accumulated_charBB.append(bar)
-        
+
         combined_img = Image.fromarray(np.vstack(resized_imgs))
         combined_charBB = np.dstack(accumulated_charBB)
         combined_txt = "\n".join(txt)
 
-        (Path(base) / 'combined').mkdir(parents=True, exist_ok=True)
         combined_img_path = Path(base) / 'combined' / (str(idx)+'.jpg')
 
         # pdraw = ImageDraw.Draw(combined_img)
         # for bbox in np.transpose(combined_charBB, (2,1,0)):
         #     foo = [tuple(pt) for pt in bbox]
         #     pdraw.line(foo+foo[:1], fill='red', width=2)
-        
+
         combined_img.save(str(combined_img_path))
 
         new_data = {
@@ -111,7 +109,7 @@ def combineVertical(chunk_list:"list of img data", base, width):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o', '--orientation', type=str, choices=['horizontal', 'vertical'], 
+    parser.add_argument('-o', '--orientation', type=str, choices=['horizontal', 'vertical'],
                         required=True, help='orientation to merge')
     parser.add_argument('-b', '--base', type=str, required=True, help='base path of images')
     parser.add_argument('--width', type=int, help='fixed width when vertical merge')
@@ -126,18 +124,20 @@ if __name__ == "__main__":
     print('imgs : ', len(imgs))
 
     total_data = []
-    
+
     for img in imgs:
         pkl = img.with_suffix('.pkl')
         with pkl.open('rb') as f:
             data = pickle.load(f)
-        
+
         this_data = {
             'fn' : img.name,
             'charBB' : data['charBB'],
-            'txt' : data['txt'] 
+            'txt' : data['txt']
         }
         total_data.append(this_data)
+
+    (Path(args.base) / 'combined').mkdir(parents=True, exist_ok=True)
 
     chunk = cutList(total_data, mini=args.min, maxi=args.max)
     if args.orientation == 'vertical':
@@ -146,6 +146,6 @@ if __name__ == "__main__":
         combined = combineHorizontal(chunk, args.base, args.height)
 
 
-    with (Path(args.base)/'merged_gt.pkl').open('wb') as gt:
+    with (Path(args.base)/'combined'/'merged_gt.pkl').open('wb') as gt:
         pickle.dump(combined, gt)
-            
+
