@@ -1,7 +1,5 @@
 # OCR-Engine
 
-_The Project is on going right now (2021-05-20)_
-
 # Overview
 
 Thanks to open source, it's not really difficult to build a customed OCR engine. In this repository, we'll do something below.
@@ -65,28 +63,24 @@ To train text detection model, we will merge line data which we already generate
 > python merge_lines.py -o vertical -b out/line --width 2000 --height 1000 --min 1 --max 5
 ```
 
-then, you will get paragraph data and `merged_gt.pkl` data below.
+then, you will get paragraph data and `out/line/combined/merged_gt.pkl` data below.
 
 ![](https://www.dropbox.com/s/m06dnj5m85y5zwy/generated_1.jpg?raw=1)
 
 ![](https://www.dropbox.com/s/5v90hlyuafqibj4/generated_0.jpg?raw=1)
 
-### E) Generate word data.
+### E) Crop word data.
 
-To train text recognition model, we will generate word data. It's just like generating line data in step **C)**. 
+To train text recognition model, we will generate word data by cropping paragraph data which we made in **C)**. 
 
 ```
 > cd generate_data
-> python split_word.py --input texts/ko-corpus.txt --output texts/word_split.txt --max_lne 20
+> python crop_words.py --pickle out/lines/combined/merged_gt.pkl --image_dir out/lines/combined --output_dir out/words
 ```
 
-Then you can get word splited corpus data. Now, let's generate images as before. 
+Then you can get word-level-splited cropped data. The total data would be located in `out/words/gt.pkl` with command above.
 
-```
-> python run.py -i texts/word_split.txt -l ko -nd -c 500000 -f 200 -rs -w 20 -t 1 -bl 2 -rbl -k 1 -rk -na 2 --output_dir out/word
-```
-![](https://www.dropbox.com/s/09ef5wilkaak8xm/generated_word_sample_0.jpg?raw=1)
-![](https://www.dropbox.com/s/3xvj1pctwv8qbu6/generated_word_sample_1.jpg?raw=1)
+![](https://www.dropbox.com/s/b91q68iw9j78ctj/generated_data_word_0.png?raw=1) ![](https://www.dropbox.com/s/ay4zt6keklq696f/generated_data_word_1.png?raw=1) ![](https://www.dropbox.com/s/kjrwyn0n0feyeym/generated_data_word_2.png?raw=1)   
 
 _Okay. We finished preparing dataset for training._
 
@@ -118,7 +112,7 @@ Text Recognizer also has some hyper-parameters. Thanks to [deep-text-recognition
 `Prediction`: select Prediction module [CTC | Attn].  
 
 ```
-> python train.py -m recognizer --data_path generate_data/out/ko/gt.pkl --version 0 --batch_size 64 --learning_rate 1.0 --max_epoch 100 --num_workers 4
+> python train.py -m recognizer --data_path generate_data/out/words/gt.pkl --version 1 --batch_size 64 --learning_rate 1.0 --max_epoch 100 --num_workers 4
 ```
 
 You need to train the model more than 15k `total iteration`.  
