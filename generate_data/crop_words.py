@@ -10,6 +10,12 @@ from pathlib import Path
 def crop_words(d, res):
     global im_dir, out_dir
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--pickle", type=str, required=True)
+    parser.add_argument("--image_dir", type=str, required=True)
+    parser.add_argument("--output_dir", type=str, required=True)
+    args = parser.parse_args()
+
     fn = d['fn']
     txt = d['txt'].strip().split()
     boxes = d['charBB']
